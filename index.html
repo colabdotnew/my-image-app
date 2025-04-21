@@ -1,29 +1,70 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>My Image Viewer</title>
+  <title>Canny Edge Detection</title>
+  <script async src="https://docs.opencv.org/4.x/opencv.js" type="text/javascript"></script>
   <style>
-    body { font-family: Arial; text-align: center; padding: 50px; }
-    img { max-width: 90%; margin-top: 20px; }
+    body { font-family: Arial; text-align: center; padding: 20px; }
+    canvas { margin: 10px; border: 1px solid #ccc; }
   </style>
 </head>
 <body>
-  <h1>Upload an Image</h1>
+  <h1>Canny Edge Detection Viewer</h1>
   <input type="file" id="fileInput" accept="image/*">
-  <div id="preview"></div>
+  <div>
+    <canvas id="originalCanvas"></canvas>
+    <canvas id="edgeCanvas"></canvas>
+  </div>
 
   <script>
-    document.getElementById('fileInput').addEventListener('change', function(e) {
+    const fileInput = document.getElementById('fileInput');
+    const originalCanvas = document.getElementById('originalCanvas');
+    const edgeCanvas = document.getElementById('edgeCanvas');
+    const ctxOriginal = originalCanvas.getContext('2d');
+    const ctxEdge = edgeCanvas.getContext('2d');
+
+    fileInput.addEventListener('change', function(e) {
       const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-          document.getElementById('preview').innerHTML = 
-            `<img src="${evt.target.result}" alt="Preview">`;
+      if (!file) return;
+
+      const img = new Image();
+      img.onload = function() {
+        originalCanvas.width = img.width;
+        originalCanvas.height = img.height;
+        edgeCanvas.width = img.width;
+        edgeCanvas.height = img.height;
+
+        // Draw original image
+        ctxOriginal.drawImage(img, 0, 0);
+
+        // Wait for OpenCV to be ready
+        if (cv && cv.imread) {
+          applyCanny();
+        } else {
+          cv['onRuntimeInitialized'] = applyCanny;
         }
-        reader.readAsDataURL(file);
-      }
+      };
+
+      img.src = URL.createObjectURL(file);
     });
+
+    function applyCanny() {
+      const src = cv.imread(originalCanvas);
+      let gray = new cv.Mat();
+      let edges = new cv.Mat();
+
+      // Convert to grayscale
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+
+      // Apply Canny
+      cv.Canny(gray, edges, 50, 150, 3, false);
+
+      // Show result
+      cv.imshow(edgeCanvas, edges);
+
+      // Free memory
+      src.delete(); gray.delete(); edges.delete();
+    }
   </script>
 </body>
 </html>
